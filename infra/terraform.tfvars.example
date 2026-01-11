@@ -1,0 +1,25 @@
+# AWS Configuration
+aws_region = "us-east-1"
+environment = "staging"
+project_name = "parking-finder"
+
+# Network Configuration
+vpc_cidr = "10.0.0.0/16"
+
+# Database Configuration (Free Tier: db.t2.micro, 20GB storage)
+db_instance_class = "db.t2.micro"
+db_allocated_storage = 20
+db_max_allocated_storage = 20  # Keep at 20GB for free tier
+db_name = "parking_finder"
+db_username = "postgres"
+db_password = "CHANGE_ME_SECURE_PASSWORD"
+
+# EC2 Configuration (Free Tier: t2.micro)
+ec2_instance_type = "t2.micro"
+
+# Docker Images
+backend_image = "ghcr.io/your-org/parking_finder/backend:latest"
+mobile_app_image = "ghcr.io/your-org/parking_finder/mobile-app:latest"
+
+# JWT Secret
+jwt_secret = "CHANGE_ME_SECURE_JWT_SECRET"

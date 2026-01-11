@@ -1,0 +1,77 @@
+name: Deploy Infrastructure
+
+on:
+  workflow_run:
+    workflows: ["Build Backend Docker Image", "Build Mobile App Docker Image"]
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+env:
+  AWS_REGION: us-east-1
+  TERRAFORM_VERSION: 1.6.0
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Terraform Format Check
+        run: terraform fmt -check
+        working-directory: ./infra
+
+      - name: Terraform Init
+        run: terraform init
+        working-directory: ./infra
+
+      - name: Terraform Validate
+        run: terraform validate
+        working-directory: ./infra
+
+      - name: Terraform Plan
+        run: terraform plan -out=tfplan
+        working-directory: ./infra
+        env:
+          TF_VAR_environment: ${{ github.event.inputs.environment || 'staging' }}
+          TF_VAR_backend_image: ghcr.io/${{ github.repository }}/backend:latest
+          TF_VAR_mobile_app_image: ghcr.io/${{ github.repository }}/mobile-app:latest
+          TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
+          TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET }}
+
+      - name: Terraform Apply
+        if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+        run: terraform apply -auto-approve tfplan
+        working-directory: ./infra
+        env:
+          TF_VAR_environment: ${{ github.event.inputs.environment || 'staging' }}
+          TF_VAR_backend_image: ghcr.io/${{ github.repository }}/backend:latest
+          TF_VAR_mobile_app_image: ghcr.io/${{ github.repository }}/mobile-app:latest
+          TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
+          TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET }}

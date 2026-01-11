@@ -1,0 +1,17 @@
+# Docker ignore file for mobile app
+# TODO: Update based on React Native project structure
+
+.git
+.gitignore
+*.log
+.DS_Store
+node_modules/
+build/
+dist/
+.idea/
+.vscode/
+*.iml
+test/
+README.md
+.env
+.env.local
