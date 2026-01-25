@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { body, validationResult } from 'express-validator';
-import { AuthService } from '../services/authService.js';
-import { CreateUserInput } from '../models/User.js';
+import { AuthService } from '../services/authService';
+import { CreateUserInput } from '../models/User';
 
 const authService = new AuthService();
 

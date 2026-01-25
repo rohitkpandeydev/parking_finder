@@ -1,10 +1,10 @@
 import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
-import pool from '../config/database.js';
-import { User, CreateUserInput, UserResponse } from '../models/User.js';
+import jwt, { SignOptions } from 'jsonwebtoken';
+import pool from '../config/database';
+import { User, CreateUserInput, UserResponse } from '../models/User';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+const JWT_SECRET: string = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+const JWT_EXPIRES_IN: string = process.env.JWT_EXPIRES_IN || '7d';
 
 export class AuthService {
   async register(userData: CreateUserInput): Promise<UserResponse> {
@@ -59,18 +59,24 @@ export class AuthService {
     const token = jwt.sign(
       { userId: user.id, email: user.email },
       JWT_SECRET,
-      { expiresIn: JWT_EXPIRES_IN }
+      { expiresIn: JWT_EXPIRES_IN } as SignOptions
     );
 
     // Return user without password
     const userResponse: UserResponse = {
       id: user.id,
       email: user.email,
-      first_name: user.first_name,
-      last_name: user.last_name,
       created_at: user.created_at,
       updated_at: user.updated_at,
     };
+    
+    // Add optional fields only if they exist
+    if (user.first_name !== undefined && user.first_name !== null) {
+      userResponse.first_name = user.first_name;
+    }
+    if (user.last_name !== undefined && user.last_name !== null) {
+      userResponse.last_name = user.last_name;
+    }
 
     return { user: userResponse, token };
   }
