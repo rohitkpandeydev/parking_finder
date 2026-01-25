@@ -15,10 +15,10 @@ on:
       environment:
         description: 'Environment to deploy to'
         required: true
-        default: 'staging'
+        default: 'Stage'
         type: choice
         options:
-          - staging
+          - Stage
           - production
 
 env:
@@ -29,7 +29,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' || github.event_name == 'push' }}
-    environment: ${{ github.event.inputs.environment || 'staging' }}
+    environment: ${{ github.event.inputs.environment || 'Stage' }}
     permissions:
       contents: read
 
@@ -65,7 +65,7 @@ jobs:
         run: terraform plan -out=tfplan
         working-directory: ./infra
         env:
-          TF_VAR_environment: ${{ github.event.inputs.environment || 'staging' }}
+          TF_VAR_environment: ${{ github.event.inputs.environment || 'Stage' }}
           TF_VAR_backend_image: ghcr.io/${{ github.repository }}/backend:latest
           TF_VAR_mobile_app_image: ghcr.io/${{ github.repository }}/mobile-app:latest
           TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
@@ -78,7 +78,7 @@ jobs:
         run: terraform apply -auto-approve tfplan
         working-directory: ./infra
         env:
-          TF_VAR_environment: ${{ github.event.inputs.environment || 'staging' }}
+          TF_VAR_environment: ${{ github.event.inputs.environment || 'Stage' }}
           TF_VAR_backend_image: ghcr.io/${{ github.repository }}/backend:latest
           TF_VAR_mobile_app_image: ghcr.io/${{ github.repository }}/mobile-app:latest
           TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
