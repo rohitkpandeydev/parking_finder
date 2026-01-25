@@ -23,8 +23,8 @@ terraform {
 
 provider "aws" {
   region = var.aws_region
-  access_key = "${var.aws_access_key}"
-  secret_key = "${var.aws_secret_key}"
+  # Credentials are provided via environment variables set by GitHub Actions
+  # or AWS credential chain (no need for explicit access_key/secret_key)
 }
 
 # Data sources
