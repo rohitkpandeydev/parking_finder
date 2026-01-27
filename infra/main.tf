@@ -13,15 +13,18 @@ terraform {
   }
 
   backend "s3" {
-    # Configure backend in terraform.tfvars or via environment variables
-    # bucket = "your-terraform-state-bucket"
-    # key    = "parking-finder/terraform.tfstate"
-    # region = "us-east-1"
+    bucket       = "terraform-backend-parking-finder"
+    key          = "parking-finder/terraform.tfstate"
+    region       = "us-east-1"
+    encrypt      = true
+    use_lockfile = true
   }
 }
 
 provider "aws" {
   region = var.aws_region
+  # Credentials are provided via environment variables set by GitHub Actions
+  # or AWS credential chain (no need for explicit access_key/secret_key)
 }
 
 # Data sources
@@ -107,6 +110,3 @@ resource "aws_route_table_association" "public" {
   route_table_id = aws_route_table.public.id
 }
 
-# Note: NAT Gateway removed to avoid charges (not in free tier)
-# RDS will be in private subnet but won't have internet access (which is fine for database)
-# EC2 will be in public subnet for direct access

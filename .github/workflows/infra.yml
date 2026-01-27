@@ -1,6 +1,11 @@
 name: Deploy Infrastructure
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'infra/**'
   workflow_run:
     workflows: ["Build Backend Docker Image", "Build Mobile App Docker Image"]
     types:
@@ -10,10 +15,10 @@ on:
       environment:
         description: 'Environment to deploy to'
         required: true
-        default: 'staging'
+        default: 'Stage'
         type: choice
         options:
-          - staging
+          - Stage
           - production
 
 env:
@@ -23,10 +28,10 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' || github.event_name == 'push' }}
+    environment: ${{ github.event.inputs.environment || 'Stage' }}
     permissions:
       contents: read
-      id-token: write
 
     steps:
       - name: Checkout repository
@@ -35,7 +40,8 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Setup Terraform
@@ -59,7 +65,7 @@ jobs:
         run: terraform plan -out=tfplan
         working-directory: ./infra
         env:
-          TF_VAR_environment: ${{ github.event.inputs.environment || 'staging' }}
+          TF_VAR_environment: ${{ github.event.inputs.environment || 'Stage' }}
           TF_VAR_backend_image: ghcr.io/${{ github.repository }}/backend:latest
           TF_VAR_mobile_app_image: ghcr.io/${{ github.repository }}/mobile-app:latest
           TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
@@ -70,7 +76,7 @@ jobs:
         run: terraform apply -auto-approve tfplan
         working-directory: ./infra
         env:
-          TF_VAR_environment: ${{ github.event.inputs.environment || 'staging' }}
+          TF_VAR_environment: ${{ github.event.inputs.environment || 'Stage' }}
           TF_VAR_backend_image: ghcr.io/${{ github.repository }}/backend:latest
           TF_VAR_mobile_app_image: ghcr.io/${{ github.repository }}/mobile-app:latest
           TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}

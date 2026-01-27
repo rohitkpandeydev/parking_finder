@@ -4,7 +4,7 @@ import {
   login,
   registerValidation,
   loginValidation,
-} from '../controllers/authController.js';
+} from '../controllers/authController';
 
 const router = Router();
 
