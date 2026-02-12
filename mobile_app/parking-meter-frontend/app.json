@@ -13,7 +13,11 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "This app uses your location to show nearby parking meters on the map.",
+        "NSUserNotificationsUsageDescription": "We send reminders when your parking session is about to expire."
+      }
     },
     "android": {
       "package": "com.shresth.parkingmeter",
@@ -21,15 +25,15 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE"
+      ],
       "edgeToEdgeEnabled": true
     },
-    "web": {
-      "favicon": "./assets/favicon.png"
-    },
-    "extra": {
-      "eas": {
-        "projectId": "051e1fbe-eca8-46e3-bcf9-f864c55874c0"
-      }
-    }
+    "web": { "favicon": "./assets/favicon.png" },
+    "extra": { "eas": { "projectId": "051e1fbe-eca8-46e3-bcf9-f864c55874c0" } }
   }
 }

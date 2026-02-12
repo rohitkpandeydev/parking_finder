@@ -1,36 +1,139 @@
-// ===================== services/api.ts =====================
-export type StartParkingPayload = {
-  zone: string;
-  vehicleType: 'Car' | 'Bike' | 'Truck';
-  vehicleNumber: string;
+import { getApiBaseUrl } from '../config';
+import { authStorage } from './authStorage';
+
+export type ParkingMeter = {
+  id: number;
+  meter_code: string;
+  latitude: number;
+  longitude: number;
+  price_per_hour: number;
+  address?: string;
+  is_available: boolean;
+  distance_km?: number;
 };
 
+export type ParkingSession = {
+  id: number;
+  user_id: number;
+  meter_id: number;
+  meter_code?: string;
+  started_at: string;
+  ends_at: string;
+  duration_minutes: number;
+  status: 'active' | 'ended';
+  remaining_seconds?: number;
+};
+
+async function request<T>(
+  path: string,
+  options: RequestInit & { token?: string | null } = {}
+): Promise<T> {
+  const { token, ...fetchOptions } = options;
+  const base = getApiBaseUrl().replace(/\/$/, '');
+  const url = `${base}${path.startsWith('/') ? path : `/${path}`}`;
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...((fetchOptions.headers as Record<string, string>) || {}),
+  };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const res = await fetch(url, { ...fetchOptions, headers });
+  const text = await res.text();
+  let data: T;
+  try {
+    data = text ? (JSON.parse(text) as T) : ({} as T);
+  } catch {
+    throw new Error(res.ok ? 'Invalid response' : text || res.statusText);
+  }
+  if (!res.ok) {
+    const errMsg = (data as { error?: string }).error || res.statusText;
+    throw new Error(errMsg);
+  }
+  return data;
+}
+
 export const api = {
-  login: async (payload: { email: string; password: string }) => {
-    return { success: true };
+  async getToken(): Promise<string | null> {
+    return authStorage.getToken();
   },
 
-  signup: async (payload: {
+  async login(payload: { email: string; password: string }) {
+    const data = await request<{ token: string; user: unknown }>('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    if (data.token) await authStorage.setToken(data.token);
+    return data;
+  },
+
+  async signup(payload: {
     email: string;
     password: string;
-    dob: string;
-  }) => {
-    console.log('SIGNUP', payload);
-    return { success: true };
+    first_name?: string;
+    last_name?: string;
+  }) {
+    const data = await request<{ user: unknown }>('/api/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    return data;
   },
 
-  startParking: async (payload: StartParkingPayload) => {
-    console.log('START PARKING', payload);
-    return {
-      sessionId: 'mock-session-id',
-      startedAt: Date.now(),
-    };
+  async logout() {
+    await authStorage.removeToken();
   },
 
-  stopParking: async (sessionId: string) => {
-    return {
-      totalAmount: 0,
-      duration: 0,
-    };
+  async getMeters(params?: {
+    latitude?: number;
+    longitude?: number;
+    radius_km?: number;
+    available_only?: boolean;
+  }): Promise<{ meters: ParkingMeter[] }> {
+    const q = new URLSearchParams();
+    if (params?.latitude != null) q.set('latitude', String(params.latitude));
+    if (params?.longitude != null) q.set('longitude', String(params.longitude));
+    if (params?.radius_km != null) q.set('radius_km', String(params.radius_km));
+    if (params?.available_only) q.set('available_only', 'true');
+    const token = await authStorage.getToken();
+    return request<{ meters: ParkingMeter[] }>(`/api/meters?${q.toString()}`, { token });
+  },
+
+  async getMeterById(id: number): Promise<ParkingMeter> {
+    const token = await authStorage.getToken();
+    return request<ParkingMeter>(`/api/meters/${id}`, { token });
+  },
+
+  async getActiveSession(): Promise<ParkingSession | null> {
+    const token = await authStorage.getToken();
+    if (!token) return null;
+    try {
+      return await request<ParkingSession>('/api/sessions/active', { token });
+    } catch {
+      return null;
+    }
+  },
+
+  async startSession(payload: { meter_id: number; duration_minutes: number }) {
+    const token = await authStorage.getToken();
+    if (!token) throw new Error('Not logged in');
+    const data = await request<{ session: ParkingSession }>('/api/sessions', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      token,
+    });
+    return data.session;
+  },
+
+  async endSession(sessionId: number): Promise<{ session: ParkingSession }> {
+    const token = await authStorage.getToken();
+    if (!token) throw new Error('Not logged in');
+    return request(`/api/sessions/${sessionId}/end`, { method: 'PATCH', token });
+  },
+
+  async listSessions(active_only?: boolean) {
+    const token = await authStorage.getToken();
+    if (!token) return { sessions: [] as ParkingSession[] };
+    const q = active_only ? '?active_only=true' : '';
+    const data = await request<{ sessions: ParkingSession[] }>(`/api/sessions${q}`, { token });
+    return data;
   },
 };

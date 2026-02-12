@@ -1,227 +1,157 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
-    View,
-    Text,
-    StyleSheet,
-    Alert,
-    TextInput,
+  View,
+  Text,
+  StyleSheet,
+  Alert,
+  ActivityIndicator,
+  RefreshControl,
+  ScrollView,
 } from 'react-native';
-
 import AppButton from '../components/AppButton';
-import ZoneSelector from '../components/ZoneSelector';
-import VehicleTypeSelector from '../components/VehicleTypeSelector';
 import ParkingTimer from '../components/ParkingTimer';
-
 import { Colors } from '../themes/colors';
-import { api } from '../services/api';
-import { calculateAmount } from '../utils/pricing';
+import { api, ParkingSession } from '../services/api';
+import { scheduleSessionReminder } from '../services/notifications';
 import { useEffect } from 'react';
-import { vehicleService } from '../services/vehicleService';
-import VehicleSelector from '../components/VehicleSelector';
 
+export default function HomeScreen({ navigation }: { navigation: any }) {
+  const [activeSession, setActiveSession] = useState<ParkingSession | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [ending, setEnding] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
-type VehicleType = 'Car' | 'Bike' | 'Truck';
+  const loadActiveSession = useCallback(async () => {
+    try {
+      const session = await api.getActiveSession();
+      setActiveSession(session);
+      if (session) {
+        await scheduleSessionReminder(new Date(session.ends_at), session.meter_code);
+      }
+    } catch {
+      setActiveSession(null);
+    }
+  }, []);
 
-const VEHICLE_REGEX = /^[A-Z]{2}[0-9]{2}[A-Z]{2}[0-9]{4}$/;
+  const refresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadActiveSession();
+    setRefreshing(false);
+  }, [loadActiveSession]);
 
-export default function HomeScreen() {
-    const [zone, setZone] = useState<string | null>(null);
-    const [vehicleType, setVehicleType] = useState<VehicleType | null>(null);
-    const [vehicleNumber, setVehicleNumber] = useState('');
-    const [active, setActive] = useState(false);
-    const [startedAt, setStartedAt] = useState<number | null>(null);
-    const [sessionId, setSessionId] = useState<string | null>(null);
-    const [vehicles, setVehicles] = useState<any[]>([]);
-
-
-    const startParking = async () => {
-        if (!zone || !vehicleType || !vehicleNumber) {
-            Alert.alert('Missing info', 'Fill all details');
-            return;
-        }
-
-        if (!VEHICLE_REGEX.test(vehicleNumber)) {
-            Alert.alert(
-                'Invalid Vehicle Number',
-                'Format: MH12AB1234'
-            );
-            return;
-        }
-        await vehicleService.addVehicle(vehicleNumber);
-        setVehicles(await vehicleService.getVehicles());
-
-
-        const response = await api.startParking({
-            zone,
-            vehicleType,
-            vehicleNumber,
-        });
-
-        setStartedAt(response.startedAt);
-        setSessionId(response.sessionId);
-        setActive(true);
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      setLoading(true);
+      await loadActiveSession();
+      if (mounted) setLoading(false);
+    })();
+    return () => {
+      mounted = false;
     };
+  }, [loadActiveSession]);
 
-    const stopParking = async () => {
-        if (!startedAt || !vehicleType || !sessionId) return;
+  const endSession = async () => {
+    if (!activeSession) return;
+    setEnding(true);
+    try {
+      await api.endSession(activeSession.id);
+      setActiveSession(null);
+      Alert.alert('Session ended', 'Your parking session has been ended.');
+    } catch (e) {
+      Alert.alert('Error', e instanceof Error ? e.message : 'Could not end session');
+    } finally {
+      setEnding(false);
+    }
+  };
 
-        const durationMinutes = Math.ceil(
-            (Date.now() - startedAt) / 60000
-        );
-
-        const totalAmount = calculateAmount(
-            zone!,
-            vehicleType,
-            durationMinutes
-        );
-
-
-        await api.stopParking(sessionId);
-
-        setActive(false);
-        setSessionId(null);
-        setStartedAt(null);
-
-        Alert.alert(
-            'Parking Ended',
-            `Vehicle: ${vehicleNumber}\nDuration: ${durationMinutes} min\nAmount: ₹${totalAmount}`
-        );
-    };
-
-    useEffect(() => {
-        vehicleService.getVehicles().then(setVehicles);
-    }, []);
-
-
+  if (loading) {
     return (
-        <View style={styles.container}>
-            {/* Branding */}
-            <View style={styles.header}>
-                <Text style={styles.brand}>ParkEase</Text>
-                <Text style={styles.tagline}>Smart parking, simplified</Text>
-            </View>
-
-            {/* Main Card */}
-            <View style={styles.card}>
-                <ZoneSelector selected={zone} onSelect={setZone} />
-                <Text style={styles.zoneInfo}>
-                    Pricing varies by zone & vehicle type
-                </Text>
-
-
-                <VehicleTypeSelector
-                    selected={vehicleType}
-                    onSelect={setVehicleType}
-                />
-                <VehicleSelector
-                    vehicles={vehicles}
-                    selected={vehicleNumber}
-                    onSelect={setVehicleNumber}
-                />
-
-
-                <Text style={styles.label}>Vehicle Number</Text>
-                <TextInput
-                    placeholder="MH12AB1234"
-                    style={styles.input}
-                    autoCapitalize="characters"
-                    value={vehicleNumber}
-                    onChangeText={setVehicleNumber}
-                    editable={!active}
-                />
-            </View>
-
-            {/* Status */}
-            <View style={styles.status}>
-                {active ? (
-                    <>
-                        <Text style={styles.activeText}>Parking Active</Text>
-                        <ParkingTimer active={active} />
-                    </>
-                ) : (
-                    <Text style={styles.inactiveText}>
-                        No active parking session
-                    </Text>
-                )}
-            </View>
-
-            {/* CTA */}
-            <AppButton
-                title={active ? 'Stop Parking' : 'Start Parking'}
-                onPress={active ? stopParking : startParking}
-            />
-        </View>
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+        <Text style={styles.loadingText}>Loading session…</Text>
+      </View>
     );
+  }
+
+  return (
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={refresh} colors={[Colors.primary]} />
+      }
+    >
+      <View style={styles.header}>
+        <Text style={styles.brand}>ParkEase</Text>
+        <Text style={styles.tagline}>Smart parking, simplified</Text>
+      </View>
+
+      <View style={styles.card}>
+        {activeSession ? (
+          <>
+            <Text style={styles.activeText}>Parking active</Text>
+            {activeSession.meter_code && (
+              <Text style={styles.meterCode}>Meter: {activeSession.meter_code}</Text>
+            )}
+            <ParkingTimer
+              active={true}
+              remainingSeconds={activeSession.remaining_seconds}
+              endsAt={activeSession.ends_at}
+            />
+            <AppButton
+              title={ending ? 'Ending…' : 'End session'}
+              onPress={endSession}
+              disabled={ending}
+            />
+          </>
+        ) : (
+          <>
+            <Text style={styles.inactiveText}>No active parking session</Text>
+            <Text style={styles.hint}>
+              Open the map, select a meter, and start a session to see the timer here.
+            </Text>
+            <AppButton title="Open map" onPress={() => navigation.navigate('Map')} />
+          </>
+        )}
+      </View>
+
+      <AppButton
+        title="Log out"
+        onPress={async () => {
+          await api.logout();
+          navigation.replace('Login');
+        }}
+      />
+    </ScrollView>
+  );
 }
+
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: Colors.background,
-        padding: 20,
-    },
-
-    header: {
-        marginBottom: 24,
-    },
-
-    brand: {
-        fontSize: 34,
-        fontWeight: '800',
-        color: Colors.primary,
-    },
-
-    tagline: {
-        fontSize: 14,
-        color: Colors.muted,
-        marginTop: 4,
-    },
-
-    card: {
-        backgroundColor: Colors.white,
-        borderRadius: 18,
-        padding: 16,
-        marginBottom: 24,
-        shadowColor: '#000',
-        shadowOpacity: 0.08,
-        shadowRadius: 12,
-        elevation: 5,
-    },
-
-    label: {
-        fontWeight: '600',
-        marginBottom: 6,
-        color: Colors.text,
-    },
-
-    input: {
-        backgroundColor: '#EEF2FF',
-        padding: 14,
-        borderRadius: 12,
-        marginBottom: 8,
-        color: Colors.text,
-        letterSpacing: 1,
-    },
-
-    status: {
-        alignItems: 'center',
-        marginBottom: 20,
-    },
-
-    activeText: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: Colors.success,
-        marginBottom: 6,
-    },
-
-    inactiveText: {
-        fontSize: 14,
-        color: Colors.muted,
-    },
-    zoneInfo: {
-        fontSize: 13,
-        color: Colors.muted,
-        marginBottom: 8,
-    },
-
+  container: { flex: 1, backgroundColor: Colors.background },
+  content: { padding: 20, paddingBottom: 40 },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.background,
+  },
+  loadingText: { marginTop: 8, color: Colors.muted },
+  header: { marginBottom: 24 },
+  brand: { fontSize: 34, fontWeight: '800', color: Colors.primary },
+  tagline: { fontSize: 14, color: Colors.muted, marginTop: 4 },
+  card: {
+    backgroundColor: Colors.white,
+    borderRadius: 18,
+    padding: 20,
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 5,
+  },
+  activeText: { fontSize: 16, fontWeight: '600', color: Colors.success, marginBottom: 6 },
+  meterCode: { fontSize: 14, color: Colors.muted, marginBottom: 8 },
+  inactiveText: { fontSize: 16, color: Colors.muted, marginBottom: 8 },
+  hint: { fontSize: 13, color: Colors.muted, marginBottom: 16 },
 });
