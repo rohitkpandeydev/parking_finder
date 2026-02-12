@@ -1,10 +1,16 @@
 import express, { Express } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import path from 'path';
 import { initializeDatabase } from './config/database';
 import routes from './routes/index';
 
-dotenv.config();
+// Ensure .env is loaded regardless of PM2 working directory.
+// - In dev (ts-node), __dirname is backend/src → ../.env is backend/.env
+// - In prod (dist), __dirname is backend/dist → ../.env is backend/.env
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
+// Fallback: also try current working directory
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
 const app: Express = express();
 const PORT = process.env.PORT || 3000;
