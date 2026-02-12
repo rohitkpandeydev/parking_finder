@@ -8,6 +8,13 @@ const DB_PORT = parseInt(process.env.DB_PORT || '5432');
 const DB_NAME = process.env.DB_NAME || 'parking_finder';
 const DB_USER = process.env.DB_USER || 'postgres';
 const DB_PASSWORD = process.env.DB_PASSWORD || 'postgres';
+const DB_SSL = (process.env.DB_SSL || '').toLowerCase() === 'true';
+// For many managed Postgres providers (including RDS) SSL is required.
+// If you use self-signed certs, set DB_SSL_REJECT_UNAUTHORIZED=false.
+const DB_SSL_REJECT_UNAUTHORIZED =
+  (process.env.DB_SSL_REJECT_UNAUTHORIZED || 'false').toLowerCase() === 'true';
+
+const sslConfig = DB_SSL ? { rejectUnauthorized: DB_SSL_REJECT_UNAUTHORIZED } : undefined;
 
 // Create database if it doesn't exist
 const createDatabaseIfNotExists = async (): Promise<void> => {
@@ -18,6 +25,7 @@ const createDatabaseIfNotExists = async (): Promise<void> => {
     database: 'postgres', // Connect to default database
     user: DB_USER,
     password: DB_PASSWORD,
+    ssl: sslConfig,
   });
 
   try {
@@ -50,6 +58,7 @@ const pool = new Pool({
   database: DB_NAME,
   user: DB_USER,
   password: DB_PASSWORD,
+  ssl: sslConfig,
 });
 
 // Initialize database schema
