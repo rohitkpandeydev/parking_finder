@@ -41,7 +41,7 @@ This folder contains the backend API for the Parking Finder MVP.
 
 ### Health Check
 - **GET** `/api/health`
-  - Returns server status
+  - Returns API status, database status, and timestamp
 
 ### Authentication
 
@@ -107,11 +107,18 @@ This folder contains the backend API for the Parking Finder MVP.
 ## Environment Variables
 
 - `PORT`: Server port (default: 3000)
-- `DB_HOST`: PostgreSQL host
-- `DB_PORT`: PostgreSQL port (default: 5432)
-- `DB_NAME`: Database name
-- `DB_USER`: Database user
-- `DB_PASSWORD`: Database password
+- `RDS_HOST`: PostgreSQL host (preferred for AWS RDS)
+- `RDS_PORT`: PostgreSQL port (default: 5432)
+- `RDS_DB_NAME`: Database name
+- `RDS_USERNAME`: Database user
+- `RDS_PASSWORD`: Database password
+- `DB_HOST`: PostgreSQL host (fallback naming)
+- `DB_PORT`: PostgreSQL port (fallback naming)
+- `DB_NAME`: Database name (fallback naming)
+- `DB_USER`: Database user (fallback naming)
+- `DB_PASSWORD`: Database password (fallback naming)
+- `DB_SSL`: Enable SSL (`true` by default)
+- `DB_SSL_REJECT_UNAUTHORIZED`: Validate cert chain (`false` by default)
 - `JWT_SECRET`: Secret key for JWT tokens
 - `JWT_EXPIRES_IN`: Token expiration time (default: 7d)
 

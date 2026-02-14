@@ -12,6 +12,15 @@ export type ParkingMeter = {
   distance_km?: number;
 };
 
+export type ParkingSpot = {
+  id: number;
+  location: string;
+  price: number;
+  is_available: boolean;
+  latitude: number;
+  longitude: number;
+};
+
 export type ParkingSession = {
   id: number;
   user_id: number;
@@ -22,6 +31,22 @@ export type ParkingSession = {
   duration_minutes: number;
   status: 'active' | 'ended';
   remaining_seconds?: number;
+};
+
+export type Reservation = {
+  id: number;
+  user_id: number;
+  spot_id: number;
+  location: string;
+  price: number;
+  status: 'active' | 'expired' | 'cancelled' | 'completed';
+  reserved_at: string;
+  expires_at: string;
+};
+
+export type ReservationDashboard = {
+  active: Reservation[];
+  past: Reservation[];
 };
 
 async function request<T>(
@@ -100,6 +125,40 @@ export const api = {
   async getMeterById(id: number): Promise<ParkingMeter> {
     const token = await authStorage.getToken();
     return request<ParkingMeter>(`/api/meters/${id}`, { token });
+  },
+
+  async getSpots(params?: {
+    available_only?: boolean;
+  }): Promise<{ spots: ParkingSpot[] }> {
+    const q = new URLSearchParams();
+    if (params?.available_only) q.set('available_only', 'true');
+    const token = await authStorage.getToken();
+    const suffix = q.toString() ? `?${q.toString()}` : '';
+    return request<{ spots: ParkingSpot[] }>(`/api/spots${suffix}`, { token });
+  },
+
+  async reserveSpot(id: number): Promise<{
+    message: string;
+    reservation_id: number;
+    expires_at: string;
+    spot: ParkingSpot;
+  }> {
+    const token = await authStorage.getToken();
+    return request<{
+      message: string;
+      reservation_id: number;
+      expires_at: string;
+      spot: ParkingSpot;
+    }>(`/api/spots/${id}/reserve`, {
+      method: 'POST',
+      token,
+    });
+  },
+
+  async getReservationDashboard(): Promise<ReservationDashboard> {
+    const token = await authStorage.getToken();
+    if (!token) return { active: [], past: [] };
+    return request<ReservationDashboard>('/api/reservations/me', { token });
   },
 
   async getActiveSession(): Promise<ParkingSession | null> {

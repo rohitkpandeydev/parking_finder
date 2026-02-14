@@ -14,6 +14,7 @@ import { Colors } from '../themes/colors';
 import { api, ParkingSession } from '../services/api';
 import { scheduleSessionReminder } from '../services/notifications';
 import { useEffect } from 'react';
+import SpotList from '../components/SpotList';
 
 export default function HomeScreen({ navigation }: { navigation: any }) {
   const [activeSession, setActiveSession] = useState<ParkingSession | null>(null);
@@ -115,6 +116,9 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
           </>
         )}
       </View>
+
+      <SpotList />
+      <AppButton title="View dashboard" onPress={() => navigation.navigate('Dashboard')} />
 
       <AppButton
         title="Log out"

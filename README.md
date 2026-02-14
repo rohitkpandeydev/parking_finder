@@ -55,7 +55,7 @@ Workflows are located in `.github/workflows/`.
 - ✅ User registration with email and password
 - ✅ User login with JWT token authentication
 - ✅ Session management
-- ✅ Database schema initialization
+- ✅ PostgreSQL/RDS database connectivity
 - ✅ Docker containerization
 - ✅ CI/CD pipelines
 - ✅ AWS infrastructure as code (Terraform)
@@ -65,11 +65,14 @@ Workflows are located in `.github/workflows/`.
 ### Backend
 
 - `PORT`: Server port (default: 3000)
-- `DB_HOST`: PostgreSQL host
-- `DB_PORT`: PostgreSQL port
-- `DB_NAME`: Database name
-- `DB_USER`: Database user
-- `DB_PASSWORD`: Database password
+- `RDS_HOST`: PostgreSQL host (preferred for AWS RDS)
+- `RDS_PORT`: PostgreSQL port
+- `RDS_DB_NAME`: Database name
+- `RDS_USERNAME`: Database user
+- `RDS_PASSWORD`: Database password
+- `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USER` / `DB_PASSWORD`: fallback names
+- `DB_SSL`: Enable SSL (`true` by default)
+- `DB_SSL_REJECT_UNAUTHORIZED`: Validate cert chain (`false` by default)
 - `JWT_SECRET`: Secret key for JWT tokens
 - `JWT_EXPIRES_IN`: Token expiration (default: 7d)
 

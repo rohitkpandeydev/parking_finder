@@ -10,6 +10,7 @@ import SignupScreen from './screens/SignupScreen';
 import MapScreen from './screens/MapScreen';
 import MeterDetailScreen from './screens/MeterDetailScreen';
 import HomeScreen from './screens/HomeScreen';
+import DashboardScreen from './screens/DashboardScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -49,6 +50,7 @@ export default function ParkingMeterWrapper() {
           options={{ title: 'Meter details' }}
         />
         <Stack.Screen name="Home" component={HomeScreen} options={{ title: 'Session' }} />
+        <Stack.Screen name="Dashboard" component={DashboardScreen} options={{ title: 'Dashboard' }} />
       </Stack.Navigator>
     </NavigationContainer>
   );
