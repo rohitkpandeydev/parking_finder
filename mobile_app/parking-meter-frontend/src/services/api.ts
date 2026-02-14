@@ -42,6 +42,14 @@ export type Reservation = {
   status: 'active' | 'expired' | 'cancelled' | 'completed';
   reserved_at: string;
   expires_at: string;
+  booked_hours: number;
+  base_cost: number;
+  overtime_cost: number;
+  total_cost: number;
+  checked_out_at: string | null;
+  overtime_minutes: number;
+  is_overdue: boolean;
+  estimated_total_cost: number;
 };
 
 export type ReservationDashboard = {
@@ -154,10 +162,13 @@ export const api = {
     return request<{ spots: ParkingSpot[] }>(`/api/spots${suffix}`, { token });
   },
 
-  async reserveSpot(id: number): Promise<{
+  async reserveSpot(id: number, hours: number): Promise<{
     message: string;
     reservation_id: number;
     expires_at: string;
+    booked_hours: number;
+    base_cost: number;
+    total_cost: number;
     spot: ParkingSpot;
   }> {
     const token = await authStorage.getToken();
@@ -165,9 +176,13 @@ export const api = {
       message: string;
       reservation_id: number;
       expires_at: string;
+      booked_hours: number;
+      base_cost: number;
+      total_cost: number;
       spot: ParkingSpot;
     }>(`/api/spots/${id}/reserve`, {
       method: 'POST',
+      body: JSON.stringify({ hours }),
       token,
     });
   },
@@ -176,6 +191,15 @@ export const api = {
     const token = await authStorage.getToken();
     if (!token) return { active: [], past: [] };
     return request<ReservationDashboard>('/api/reservations/me', { token });
+  },
+
+  async checkoutReservation(reservationId: number): Promise<{ message: string; reservation: Reservation }> {
+    const token = await authStorage.getToken();
+    if (!token) throw new Error('Not logged in');
+    return request<{ message: string; reservation: Reservation }>(
+      `/api/reservations/${reservationId}/checkout`,
+      { method: 'POST', token }
+    );
   },
 
   async getActiveSession(): Promise<ParkingSession | null> {

@@ -48,7 +48,7 @@ export default function SpotList() {
         spots.map((item) => (
           <View style={styles.item} key={item.id}>
             <Text style={styles.location}>{item.location}</Text>
-            <Text style={styles.meta}>Price: ${item.price.toFixed(2)}</Text>
+            <Text style={styles.meta}>Price: ₹{item.price.toFixed(2)}</Text>
             <Text style={item.is_available ? styles.available : styles.unavailable}>
               {item.is_available ? 'Available' : 'Unavailable'}
             </Text>

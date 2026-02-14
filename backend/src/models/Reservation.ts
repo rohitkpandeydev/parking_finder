@@ -7,6 +7,14 @@ export interface Reservation {
   status: 'active' | 'expired' | 'cancelled' | 'completed';
   reserved_at: string;
   expires_at: string;
+  booked_hours: number;
+  base_cost: number;
+  overtime_cost: number;
+  total_cost: number;
+  checked_out_at: string | null;
+  overtime_minutes: number;
+  is_overdue: boolean;
+  estimated_total_cost: number;
 }
 
 export interface ReservationDashboardResponse {

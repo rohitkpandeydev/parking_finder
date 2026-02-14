@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { param, query, validationResult } from 'express-validator';
+import { body, param, query, validationResult } from 'express-validator';
 import { SpotService } from '../services/spotService';
 import { AuthRequest } from '../middleware/authMiddleware';
 
@@ -36,7 +36,8 @@ export const reserveSpot = async (req: AuthRequest, res: Response): Promise<void
 
     const userId = req.userId!;
     const id = Number.parseInt(req.params.id ?? '', 10);
-    const result = await spotService.reserve(userId, id);
+    const hours = Number.parseInt(String(req.body.hours ?? ''), 10);
+    const result = await spotService.reserve(userId, id, hours);
 
     if (result.status === 'not_found') {
       res.status(404).json({ error: 'Parking spot not found' });
@@ -52,6 +53,9 @@ export const reserveSpot = async (req: AuthRequest, res: Response): Promise<void
       message: 'Parking spot reserved',
       reservation_id: result.reservation_id,
       expires_at: result.expires_at,
+      booked_hours: result.booked_hours,
+      base_cost: result.base_cost,
+      total_cost: result.total_cost,
       spot: result.spot,
     });
   } catch (error) {
@@ -62,4 +66,5 @@ export const reserveSpot = async (req: AuthRequest, res: Response): Promise<void
 
 export const reserveSpotValidation = [
   param('id').isInt({ min: 1 }).withMessage('Valid spot id is required'),
+  body('hours').isInt({ min: 1, max: 24 }).withMessage('hours must be between 1 and 24'),
 ];

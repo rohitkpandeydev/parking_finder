@@ -54,7 +54,7 @@ export default function MeterDetailScreen({
         <Text style={styles.meterCode}>{meter.meter_code}</Text>
         <View style={styles.row}>
           <Text style={styles.label}>Price</Text>
-          <Text style={styles.value}>${meter.price_per_hour}/hour</Text>
+          <Text style={styles.value}>₹{meter.price_per_hour}/hour</Text>
         </View>
         <View style={styles.row}>
           <Text style={styles.label}>Availability</Text>

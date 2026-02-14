@@ -141,9 +141,49 @@ export const initializeSchema = async (): Promise<void> => {
         CHECK (status IN ('active', 'expired', 'cancelled', 'completed')),
       reserved_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
       expires_at TIMESTAMP NOT NULL,
+      booked_hours INTEGER NOT NULL DEFAULT 2 CHECK (booked_hours > 0),
+      base_cost NUMERIC(10, 2) NOT NULL DEFAULT 0,
+      overtime_cost NUMERIC(10, 2) NOT NULL DEFAULT 0,
+      total_cost NUMERIC(10, 2) NOT NULL DEFAULT 0,
+      checked_out_at TIMESTAMP NULL,
       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
     )
+  `);
+
+  await pool.query(`
+    ALTER TABLE reservations
+    ADD COLUMN IF NOT EXISTS booked_hours INTEGER NOT NULL DEFAULT 2,
+    ADD COLUMN IF NOT EXISTS base_cost NUMERIC(10, 2) NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS overtime_cost NUMERIC(10, 2) NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS total_cost NUMERIC(10, 2) NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS checked_out_at TIMESTAMP NULL
+  `);
+
+  await pool.query(`
+    UPDATE reservations r
+    SET
+      booked_hours = GREATEST(
+        1,
+        COALESCE(
+          booked_hours,
+          CEIL(EXTRACT(EPOCH FROM (r.expires_at - r.reserved_at)) / 3600.0)::INTEGER,
+          2
+        )
+      ),
+      base_cost = CASE
+        WHEN base_cost IS NULL OR base_cost = 0
+          THEN ROUND((s.price * GREATEST(1, COALESCE(booked_hours, 2)))::numeric, 2)
+        ELSE base_cost
+      END,
+      total_cost = CASE
+        WHEN total_cost IS NULL OR total_cost = 0
+          THEN ROUND((s.price * GREATEST(1, COALESCE(booked_hours, 2)))::numeric, 2)
+        ELSE total_cost
+      END,
+      overtime_cost = COALESCE(overtime_cost, 0)
+    FROM parking_spots s
+    WHERE s.id = r.spot_id
   `);
 
   await pool.query(
@@ -151,5 +191,8 @@ export const initializeSchema = async (): Promise<void> => {
   );
   await pool.query(
     'CREATE INDEX IF NOT EXISTS idx_reservations_status_expires_at ON reservations(status, expires_at)'
+  );
+  await pool.query(
+    'CREATE INDEX IF NOT EXISTS idx_reservations_checkout_status ON reservations(checked_out_at, status)'
   );
 };

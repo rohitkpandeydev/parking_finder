@@ -4,8 +4,8 @@ Express + TypeScript backend for Parking Finder.
 
 ## Live API
 
-- Base URL: `http://100.26.182.109:3000`
-- Health: `GET /api/health`
+- Base URL: `https://smartparkingbits.duckdns.org/api`
+- Health: `https://smartparkingbits.duckdns.org/api/health`
 
 ## Stack
 
@@ -13,6 +13,7 @@ Express + TypeScript backend for Parking Finder.
 - TypeScript
 - PostgreSQL (`pg`)
 - JWT authentication
+- Input validation via `express-validator`
 
 ## Local Setup
 
@@ -23,7 +24,7 @@ npm install
 npm run dev
 ```
 
-Build/run production:
+Build for production:
 
 ```bash
 npm run build
@@ -34,43 +35,69 @@ npm start
 
 - `PORT` (default `3000`)
 - `RDS_HOST` / `RDS_PORT` / `RDS_DB_NAME` / `RDS_USERNAME` / `RDS_PASSWORD`
-- Fallback DB names: `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USER` / `DB_PASSWORD`
+- Fallback DB vars: `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USER` / `DB_PASSWORD`
 - `DB_SSL` (default `true`)
 - `DB_SSL_REJECT_UNAUTHORIZED` (default `false`)
 - `JWT_SECRET`
 - `JWT_EXPIRES_IN` (default `7d`)
-- `RESERVATION_DURATION_MINUTES` (default `120`)
+- `RESERVATION_DURATION_MINUTES` (legacy fallback default `120`)
+- `RESERVATION_OVERTIME_MULTIPLIER` (default `1.5`)
 
 ## API Endpoints
 
 ### Health
 
 - `GET /api/health`
-  - Returns API status + DB status.
+  - Returns service status and DB connectivity.
 
 ### Auth
 
 - `POST /api/auth/register`
-  - Body: `email`, `password`, optional `first_name`, `last_name`
+  - Body:
+    - `email` (required)
+    - `password` (required)
+    - `first_name` (optional)
+    - `last_name` (optional)
 - `POST /api/auth/login`
-  - Body: `email`, `password`
-  - Returns JWT token.
+  - Body:
+    - `email` (required)
+    - `password` (required)
+  - Returns JWT.
 
 ### Spots
 
 - `GET /api/spots`
-  - Optional query: `available_only=true`
-- `POST /api/spots/:id/reserve` (auth required)
-  - Reserves spot, marks unavailable, creates reservation.
+  - Query:
+    - `available_only=true|false` (optional)
+  - Returns parking spots with:
+    - `id`, `location`, `price`, `is_available`, `latitude`, `longitude`
 
-### Reservations (Dashboard)
-
-- `GET /api/reservations/me` (auth required)
+- `POST /api/spots/:id/reserve` (auth)
+  - Body:
+    - `hours` (required integer, `1..24`)
+  - Behavior:
+    - Marks spot unavailable
+    - Creates reservation with `expires_at`
+    - Computes `base_cost` and initial `total_cost`
   - Returns:
-    - `active`: current reservations
-    - `past`: expired/cancelled/completed history
+    - `reservation_id`, `expires_at`, `booked_hours`, `base_cost`, `total_cost`, `spot`
 
-### Sessions
+### Reservations
+
+- `GET /api/reservations/me` (auth)
+  - Returns:
+    - `active`: not checked-out reservations (including overdue)
+    - `past`: completed/cancelled history
+  - Reservation includes:
+    - `booked_hours`, `base_cost`, `overtime_cost`, `total_cost`, `estimated_total_cost`, `overtime_minutes`, `checked_out_at`
+
+- `POST /api/reservations/:id/checkout` (auth)
+  - Finalizes reservation
+  - Computes overtime charge if `now > expires_at`
+  - Sets `status=completed`, writes `checked_out_at`, releases spot
+  - Returns final reservation totals
+
+### Sessions (legacy meter flow)
 
 - `POST /api/sessions` (auth)
 - `GET /api/sessions/active` (auth)
@@ -83,11 +110,14 @@ npm start
 - `GET /api/meters`
 - `GET /api/meters/:id`
 
-## Notes
+## Data Model Notes
 
-- Signup/login now normalize email (`trim + lowercase`) to avoid case/whitespace login mismatches.
-- Schema initializer includes:
-  - `users`
-  - `parking_spots`
-  - `reservations`
-- Spot seeds include Bangalore locations.
+`reservations` table now includes:
+
+- `booked_hours`
+- `base_cost`
+- `overtime_cost`
+- `total_cost`
+- `checked_out_at`
+
+Migration safety is handled in schema initialization using `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`.

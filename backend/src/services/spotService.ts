@@ -3,12 +3,21 @@ import { ParkingSpot } from '../models/ParkingSpot';
 import { ReservationService } from './reservationService';
 
 type ReserveSpotResult =
-  | { status: 'reserved'; spot: ParkingSpot; reservation_id: number; expires_at: string }
+  | {
+      status: 'reserved';
+      spot: ParkingSpot;
+      reservation_id: number;
+      expires_at: string;
+      booked_hours: number;
+      base_cost: number;
+      total_cost: number;
+    }
   | { status: 'not_found' }
   | { status: 'unavailable' };
 
 //REVERVATION MINUTES
 const DEFAULT_RESERVATION_MINUTES = 120;
+const DEFAULT_RESERVATION_HOURS = 2;
 
 export class SpotService {
   private readonly reservationService = new ReservationService();
@@ -31,14 +40,13 @@ export class SpotService {
     }));
   }
 
-//ASYC CALLS
-  async reserve(userId: number, id: number): Promise<ReserveSpotResult> {
+  async reserve(userId: number, id: number, hours: number): Promise<ReserveSpotResult> {
     await this.reservationService.syncExpiredReservations();
 
     const reservationMinutes = Number.parseInt(process.env.RESERVATION_DURATION_MINUTES || '', 10);
-    const durationMinutes = Number.isNaN(reservationMinutes)
-      ? DEFAULT_RESERVATION_MINUTES
-      : reservationMinutes;
+    const durationMinutes = Number.isNaN(reservationMinutes) ? DEFAULT_RESERVATION_MINUTES : reservationMinutes;
+    const defaultHours = Math.max(DEFAULT_RESERVATION_HOURS, Math.floor(durationMinutes / 60));
+    const bookedHours = Number.isNaN(hours) ? defaultHours : hours;
 
     const client = await pool.connect();
     try {
@@ -66,11 +74,20 @@ export class SpotService {
 
       const reservationResult = await client.query(
         `
-          INSERT INTO reservations (user_id, spot_id, status, expires_at)
-          VALUES ($1, $2, 'active', CURRENT_TIMESTAMP + ($3::text || ' minutes')::interval)
-          RETURNING id, expires_at
+          INSERT INTO reservations (user_id, spot_id, status, expires_at, booked_hours, base_cost, overtime_cost, total_cost)
+          VALUES (
+            $1,
+            $2,
+            'active',
+            CURRENT_TIMESTAMP + ($3::text || ' hours')::interval,
+            $3,
+            ROUND(($4 * $3)::numeric, 2),
+            0,
+            ROUND(($4 * $3)::numeric, 2)
+          )
+          RETURNING id, expires_at, booked_hours, base_cost, total_cost
         `,
-        [userId, id, durationMinutes]
+        [userId, id, bookedHours, Number(reserveResult.rows[0]!.price)]
       );
 
       await client.query('COMMIT');
@@ -86,6 +103,9 @@ export class SpotService {
         status: 'reserved',
         reservation_id: reservationRow.id as number,
         expires_at: expiresAt,
+        booked_hours: Number(reservationRow.booked_hours),
+        base_cost: Number(reservationRow.base_cost),
+        total_cost: Number(reservationRow.total_cost),
         spot: {
           id: row.id as number,
           location: row.location as string,

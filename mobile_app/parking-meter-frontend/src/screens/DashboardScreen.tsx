@@ -1,10 +1,12 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 import AppButton from '../components/AppButton';
@@ -20,9 +22,13 @@ const formatDateTime = (value: string): string => {
 function ReservationSection({
   title,
   reservations,
+  onCheckout,
+  checkingOutId,
 }: {
   title: string;
   reservations: Reservation[];
+  onCheckout?: (reservationId: number) => Promise<void>;
+  checkingOutId?: number | null;
 }) {
   return (
     <View style={styles.section}>
@@ -34,9 +40,34 @@ function ReservationSection({
           <View key={reservation.id} style={styles.card}>
             <Text style={styles.cardTitle}>Spot #{reservation.spot_id}</Text>
             <Text style={styles.cardMeta}>{reservation.location}</Text>
-            <Text style={styles.cardMeta}>${reservation.price.toFixed(2)}/hr</Text>
+            <Text style={styles.cardMeta}>₹{reservation.price.toFixed(2)}/hr</Text>
+            <Text style={styles.cardMeta}>Booked: {reservation.booked_hours} hour(s)</Text>
             <Text style={styles.cardMeta}>Reserved: {formatDateTime(reservation.reserved_at)}</Text>
             <Text style={styles.cardMeta}>Expires: {formatDateTime(reservation.expires_at)}</Text>
+            <Text style={styles.cardMeta}>Base Cost: ₹{reservation.base_cost.toFixed(2)}</Text>
+            <Text style={styles.cardMeta}>
+              Overtime: {reservation.overtime_minutes} min (₹{reservation.overtime_cost.toFixed(2)})
+            </Text>
+            <Text style={styles.cardMeta}>
+              {reservation.checked_out_at ? 'Final Total' : 'Current Total'}: ₹
+              {reservation.estimated_total_cost.toFixed(2)}
+            </Text>
+            {reservation.is_overdue && !reservation.checked_out_at ? (
+              <Text style={styles.overdueText}>
+                Overdue: Charges are increasing until checkout.
+              </Text>
+            ) : null}
+            {onCheckout && !reservation.checked_out_at ? (
+              <TouchableOpacity
+                style={[styles.checkoutBtn, checkingOutId === reservation.id && styles.checkoutBtnDisabled]}
+                onPress={() => onCheckout(reservation.id)}
+                disabled={checkingOutId === reservation.id}
+              >
+                <Text style={styles.checkoutBtnText}>
+                  {checkingOutId === reservation.id ? 'Checking out…' : 'Checkout'}
+                </Text>
+              </TouchableOpacity>
+            ) : null}
             <Text style={styles.status}>Status: {reservation.status}</Text>
           </View>
         ))
@@ -49,6 +80,7 @@ export default function DashboardScreen({ navigation }: { navigation: any }) {
   const [data, setData] = useState<ReservationDashboard>({ active: [], past: [] });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [checkingOutId, setCheckingOutId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const loadDashboard = useCallback(async () => {
@@ -76,6 +108,25 @@ export default function DashboardScreen({ navigation }: { navigation: any }) {
     setRefreshing(false);
   }, [loadDashboard]);
 
+  const checkoutReservation = useCallback(
+    async (reservationId: number) => {
+      setCheckingOutId(reservationId);
+      try {
+        const { reservation } = await api.checkoutReservation(reservationId);
+        Alert.alert(
+          'Checked out',
+          `Final payable amount: ₹${reservation.total_cost.toFixed(2)}`
+        );
+        await loadDashboard();
+      } catch (e) {
+        Alert.alert('Checkout failed', e instanceof Error ? e.message : 'Failed to checkout reservation');
+      } finally {
+        setCheckingOutId(null);
+      }
+    },
+    [loadDashboard]
+  );
+
   if (loading) {
     return (
       <View style={styles.centered}>
@@ -94,7 +145,12 @@ export default function DashboardScreen({ navigation }: { navigation: any }) {
       <Text style={styles.header}>Your Reservations</Text>
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-      <ReservationSection title="Active Reservations" reservations={data.active} />
+      <ReservationSection
+        title="Active Reservations"
+        reservations={data.active}
+        onCheckout={checkoutReservation}
+        checkingOutId={checkingOutId}
+      />
       <ReservationSection title="Past Reservations" reservations={data.past} />
 
       <AppButton title="Open map" onPress={() => navigation.navigate('Map')} />
@@ -138,4 +194,21 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 16, fontWeight: '700', color: Colors.text, marginBottom: 4 },
   cardMeta: { fontSize: 13, color: Colors.muted, marginBottom: 2 },
   status: { fontSize: 13, color: Colors.text, fontWeight: '600', marginTop: 4 },
+  overdueText: {
+    fontSize: 12,
+    color: '#B91C1C',
+    fontWeight: '600',
+    marginTop: 4,
+  },
+  checkoutBtn: {
+    marginTop: 8,
+    backgroundColor: Colors.primary,
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  checkoutBtnDisabled: {
+    opacity: 0.7,
+  },
+  checkoutBtnText: { color: Colors.white, fontWeight: '700' },
 });

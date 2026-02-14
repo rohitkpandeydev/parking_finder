@@ -4,16 +4,18 @@ React Native + Expo frontend for Parking Finder.
 
 ## Live Web Deployment
 
-- `http://100.26.182.109:8080`
+- App URL: `https://smartparkingbits.duckdns.org`
+- API base used in production: `https://smartparkingbits.duckdns.org/api`
 
 ## Stack
 
 - Expo SDK 54
 - React Native
 - React Navigation
-- AsyncStorage for token persistence
-- Web map via `pigeon-maps`
-- Native map via `react-native-maps`
+- AsyncStorage token persistence
+- Web map: `pigeon-maps`
+- Native map: `react-native-maps`
+- Notifications: `expo-notifications`
 
 ## Local Setup
 
@@ -23,34 +25,31 @@ npm install
 npm run web
 ```
 
-For native:
+For native builds:
 
 ```bash
 npm start
-# press i (iOS) or a (Android)
+# iOS: press i
+# Android: press a
 ```
 
 ## Configuration
 
-Backend API URL is set in:
+API base URL is configured in:
 
-- `parking-meter-frontend/src/config.ts`
+- `mobile_app/parking-meter-frontend/src/config.ts`
 
-Current value points to deployed backend:
-
-- `http://100.26.182.109:3000`
-
-## Implemented UI Flows
+## Frontend Flows
 
 - Login / Signup
 - Spot list and map pins
-- Spot reservation
-- Reservation dashboard (`active` / `past`)
-- Session screen
+- Spot reservation with booking hours
+- Reservation details with INR cost breakdown
+- Checkout action from dashboard
+- Reservation reminder notification scheduling (1 hour before expiry)
 
-## Important Notes
+## Platform Notes
 
-- Web and native use platform-specific map implementations:
-  - `MapScreen.web.tsx` for web
-  - `MapScreen.tsx` for iOS/Android
-- If login/signup appears stuck, inline error messages are rendered on screen.
+- `MapScreen.web.tsx`: web map implementation
+- `MapScreen.tsx`: iOS/Android map implementation
+- Notification support depends on permissions and device OS behavior

@@ -1,30 +1,33 @@
 # Parking Finder
 
-Parking Finder is a TypeScript + React Native/Expo application for discovering parking spots, reserving them, and tracking user reservation/session activity.
+Parking Finder is a TypeScript + React Native/Expo app for discovering parking spots, reserving for selected hours, and checking out with overtime billing.
 
 ## Live Deployment
 
-- Frontend (Web): `http://100.26.182.109:8080`
-- Backend API: `http://100.26.182.109:3000`
-- Health Check: `http://100.26.182.109:3000/api/health`
+- Frontend (HTTPS): `https://smartparkingbits.duckdns.org`
+- API Base (HTTPS): `https://smartparkingbits.duckdns.org/api`
+- Health: `https://smartparkingbits.duckdns.org/api/health`
+- EC2 IP (direct): `100.26.182.109` (containers run on 8080/3000 behind nginx)
 
 ## Repository Structure
 
 - `backend/`: Express + TypeScript API (PostgreSQL)
-- `mobile_app/parking-meter-frontend/`: Expo app (web + mobile)
-- `infra/`: Terraform configuration
-- `docs/`: architecture/contracts/requirements docs
+- `mobile_app/parking-meter-frontend/`: Expo app (iOS/Android/Web)
+- `infra/`: Terraform for AWS infrastructure resources
+- `docs/`: API contracts, architecture, requirements
 
-## Implemented Features
+## Current Features
 
-- JWT authentication (`register`, `login`)
-- Health endpoint with DB status
-- Spot listing module (`/api/spots`)
-- Reservation workflow (`/api/spots/:id/reserve`)
-- User reservation dashboard (`/api/reservations/me` with `active` + `past`)
-- Session APIs (`/api/sessions/*`)
-- Bangalore-focused spot seed data
-- Dockerized backend and frontend web deployment
+- JWT auth (`register`, `login`)
+- Spot listing API with coordinates (`latitude`, `longitude`)
+- Spot booking by selected hours (`1-24`)
+- Reservation dashboard (`active`, `past`)
+- Reservation checkout API
+- Overtime billing when reservation expires and user has not checked out
+- Local app notifications for reservation expiry reminder (1 hour before)
+- Session APIs for legacy parking meter flow
+- Dockerized deployment (backend + frontend) on EC2
+- HTTPS via nginx + DuckDNS + Let's Encrypt
 
 ## Quick Start (Local)
 
@@ -45,16 +48,15 @@ npm install
 npm run web
 ```
 
-Then open the web URL shown by Expo (or mobile emulator/device via Expo).
-
-## API Summary
+## API Summary (Latest)
 
 - `GET /api/health`
 - `POST /api/auth/register`
 - `POST /api/auth/login`
 - `GET /api/spots`
-- `POST /api/spots/:id/reserve` (auth)
+- `POST /api/spots/:id/reserve` (auth, body includes `hours`)
 - `GET /api/reservations/me` (auth)
+- `POST /api/reservations/:id/checkout` (auth)
 - `POST /api/sessions` (auth)
 - `GET /api/sessions/active` (auth)
 - `GET /api/sessions` (auth)
@@ -62,4 +64,4 @@ Then open the web URL shown by Expo (or mobile emulator/device via Expo).
 - `PATCH /api/sessions/:id/end` (auth)
 - Legacy meter endpoints: `GET /api/meters`, `GET /api/meters/:id`
 
-For details, see `backend/README.md`.
+For full payloads and examples, see `docs/api-contracts.md` and `backend/README.md`.

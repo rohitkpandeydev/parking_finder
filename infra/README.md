@@ -1,26 +1,23 @@
 # Infrastructure (Terraform)
 
-Terraform configuration for Parking Finder infrastructure on AWS.
+Terraform configuration for AWS infrastructure used by Parking Finder.
 
 ## Current Runtime Deployment
 
-Current live environment is running on EC2 + RDS:
-
-- EC2: `100.26.182.109`
-- Backend: `http://100.26.182.109:3000`
-- Frontend web: `http://100.26.182.109:8080`
+- Domain: `smartparkingbits.duckdns.org`
+- Frontend: `https://smartparkingbits.duckdns.org`
+- Backend API: `https://smartparkingbits.duckdns.org/api`
+- EC2 host: `100.26.182.109`
 - RDS endpoint: `database-1.c4xc08yqg78b.us-east-1.rds.amazonaws.com`
 
-## Terraform Folder Purpose
+## Current Operating Model
 
-Use this folder to provision/update AWS resources consistently.
+- EC2 runs Docker containers for backend and frontend.
+- Host nginx handles TLS termination and reverse proxy.
+- DuckDNS provides free DNS.
+- Let's Encrypt issues certificates.
 
-## Prerequisites
-
-- Terraform >= 1.6
-- AWS credentials configured
-
-## Usage
+## Terraform Usage
 
 ```bash
 cd infra
@@ -32,13 +29,14 @@ terraform apply
 
 ## Files
 
-- `main.tf`: provider + core setup
-- `ec2.tf`: EC2 resources
-- `rds.tf`: PostgreSQL RDS resources
-- `variables.tf`: configurable inputs
-- `outputs.tf`: values returned after apply
+- `main.tf`: providers and shared settings
+- `ec2.tf`: EC2 instance resources
+- `rds.tf`: PostgreSQL resources
+- `variables.tf`: input variables
+- `outputs.tf`: generated outputs
 
-## Notes
+## Security Notes
 
-- Keep secrets out of git (`terraform.tfvars`, passwords, JWT secrets).
-- Restrict security group access (especially DB port 5432).
+- Keep secrets out of git (`terraform.tfvars`, DB passwords, JWT secrets).
+- EC2 SG inbound required for runtime: `22`, `80`, `443`.
+- RDS SG should allow `5432` only from EC2 SG.

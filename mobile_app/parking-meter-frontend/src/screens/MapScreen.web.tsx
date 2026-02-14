@@ -11,11 +11,15 @@ import {
 import { api, ParkingSpot } from '../services/api';
 import { Colors } from '../themes/colors';
 import { Map, Marker } from 'pigeon-maps';
+import { scheduleReservationReminder } from '../services/notifications';
+
+const BOOKING_HOUR_OPTIONS = [1, 2, 3, 4, 6];
 
 export default function MapScreen({ navigation }: { navigation: any }) {
   const [spots, setSpots] = useState<ParkingSpot[]>([]);
   const [selectedSpotId, setSelectedSpotId] = useState<number | null>(null);
   const [reservingSpotId, setReservingSpotId] = useState<number | null>(null);
+  const [bookingHours, setBookingHours] = useState<number>(2);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,16 +52,24 @@ export default function MapScreen({ navigation }: { navigation: any }) {
 
     setReservingSpotId(selectedSpot.id);
     try {
-      const { spot } = await api.reserveSpot(selectedSpot.id);
+      const { spot, expires_at } = await api.reserveSpot(selectedSpot.id, bookingHours);
       setSpots((prev) => prev.map((item) => (item.id === spot.id ? spot : item)));
-      Alert.alert('Reserved', `Spot #${spot.id} has been reserved.`);
+      try {
+        await scheduleReservationReminder(new Date(expires_at), selectedSpot.location);
+      } catch {
+        // Web may not support local notifications; ignore.
+      }
+      Alert.alert(
+        'Reserved',
+        `Spot #${spot.id} reserved for ${bookingHours} hour${bookingHours > 1 ? 's' : ''}.`
+      );
     } catch (e) {
       Alert.alert('Reservation failed', e instanceof Error ? e.message : 'Failed to reserve spot');
       await fetchSpots();
     } finally {
       setReservingSpotId(null);
     }
-  }, [fetchSpots, selectedSpot]);
+  }, [bookingHours, fetchSpots, selectedSpot]);
 
   return (
     <View style={styles.container}>
@@ -97,7 +109,7 @@ export default function MapScreen({ navigation }: { navigation: any }) {
             <TouchableOpacity style={styles.spotCard} onPress={() => setSelectedSpotId(item.id)}>
               <Text style={styles.spotTitle}>Spot #{item.id}</Text>
               <Text style={styles.spotMeta}>{item.location}</Text>
-              <Text style={styles.spotMeta}>${item.price.toFixed(2)}/hr</Text>
+              <Text style={styles.spotMeta}>₹{item.price.toFixed(2)}/hr</Text>
               <Text style={item.is_available ? styles.available : styles.unavailable}>
                 {item.is_available ? 'Available' : 'Unavailable'}
               </Text>
@@ -110,10 +122,24 @@ export default function MapScreen({ navigation }: { navigation: any }) {
         <View style={styles.detailCard}>
           <Text style={styles.detailTitle}>Spot #{selectedSpot.id}</Text>
           <Text style={styles.detailText}>{selectedSpot.location}</Text>
-          <Text style={styles.detailText}>${selectedSpot.price.toFixed(2)}/hr</Text>
+          <Text style={styles.detailText}>₹{selectedSpot.price.toFixed(2)}/hr</Text>
           <Text style={selectedSpot.is_available ? styles.available : styles.unavailable}>
             {selectedSpot.is_available ? 'Available' : 'Unavailable'}
           </Text>
+          <Text style={styles.hoursLabel}>Book for (hours)</Text>
+          <View style={styles.hoursRow}>
+            {BOOKING_HOUR_OPTIONS.map((hours) => (
+              <TouchableOpacity
+                key={hours}
+                style={[styles.hourChip, bookingHours === hours && styles.hourChipActive]}
+                onPress={() => setBookingHours(hours)}
+              >
+                <Text style={[styles.hourChipText, bookingHours === hours && styles.hourChipTextActive]}>
+                  {hours}h
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
           <TouchableOpacity
             style={[
               styles.reserveBtn,
@@ -187,6 +213,22 @@ const styles = StyleSheet.create({
   },
   detailTitle: { fontSize: 16, fontWeight: '700', color: Colors.text, marginBottom: 4 },
   detailText: { fontSize: 14, color: Colors.muted, marginBottom: 2 },
+  hoursLabel: { marginTop: 8, fontSize: 12, color: Colors.muted, fontWeight: '600' },
+  hoursRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
+  hourChip: {
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 14,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: Colors.white,
+  },
+  hourChipActive: {
+    borderColor: Colors.primary,
+    backgroundColor: '#EFF6FF',
+  },
+  hourChipText: { color: Colors.text, fontSize: 12, fontWeight: '600' },
+  hourChipTextActive: { color: Colors.primary },
   reserveBtn: {
     marginTop: 10,
     backgroundColor: Colors.primary,

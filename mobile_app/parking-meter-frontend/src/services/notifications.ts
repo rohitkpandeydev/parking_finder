@@ -3,6 +3,8 @@ import * as Notifications from 'expo-notifications';
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
   }),
@@ -30,7 +32,7 @@ export async function scheduleSessionReminder(endsAt: Date, meterCode?: string):
           ? `Your session at ${meterCode} ends in 5 minutes.`
           : 'Your parking session ends in 5 minutes.',
       },
-      trigger: { date: reminderAt },
+      trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: reminderAt },
     });
   }
 
@@ -41,7 +43,40 @@ export async function scheduleSessionReminder(endsAt: Date, meterCode?: string):
         ? `Session at ${meterCode} has expired.`
         : 'Your parking session has expired.',
     },
-    trigger: { date: endsAt },
+    trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: endsAt },
+  });
+}
+
+export async function scheduleReservationReminder(
+  expiresAt: Date,
+  location?: string
+): Promise<void> {
+  const granted = await requestNotificationPermission();
+  if (!granted) return;
+
+  const reminderAt = new Date(expiresAt);
+  reminderAt.setHours(reminderAt.getHours() - 1);
+
+  if (reminderAt > new Date()) {
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: 'Reservation reminder',
+        body: location
+          ? `Your reservation at ${location} expires in 1 hour.`
+          : 'Your parking reservation expires in 1 hour.',
+      },
+      trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: reminderAt },
+    });
+  }
+
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title: 'Reservation expired',
+      body: location
+        ? `Reservation at ${location} has expired. Overtime charges may apply until checkout.`
+        : 'Your reservation has expired. Overtime charges may apply until checkout.',
+    },
+    trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: expiresAt },
   });
 }
 

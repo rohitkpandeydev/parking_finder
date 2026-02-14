@@ -1,19 +1,24 @@
 # Controllers
 
-This directory contains Express controller handlers for each API module.
+Express controllers by module.
 
-## Current modules
+## Current Modules
 
-- `authController.ts`: register/login
-- `healthController.ts`: health check
-- `spotController.ts`: spot listing and reservation
-- `reservationController.ts`: user dashboard reservations
-- `sessionController.ts`: parking session lifecycle
-- `meterController.ts`: legacy meter APIs
+- `authController.ts`: `register`, `login`
+- `healthController.ts`: health endpoint
+- `spotController.ts`: list spots and reserve by booking hours
+- `reservationController.ts`: reservation dashboard and checkout endpoint
+- `sessionController.ts`: legacy parking session lifecycle
+- `meterController.ts`: legacy meter endpoints
 
-Controllers should:
+## Controller Responsibilities
 
 - Validate request input (`express-validator`)
-- Delegate business logic to services
-- Return HTTP status + response payload
-- Avoid embedding SQL directly (use services)
+- Delegate business logic to service layer
+- Return proper HTTP status and JSON payload
+- Avoid SQL in controller layer
+
+## Reservation-Specific Behavior
+
+- Reserve endpoint validates `hours` in range `1..24`
+- Checkout endpoint finalizes overtime and total payable amount
