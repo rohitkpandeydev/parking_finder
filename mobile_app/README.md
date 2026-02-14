@@ -1,44 +1,56 @@
-# Mobile Application (React Native)
+# Frontend App (Expo)
 
-This folder contains the React Native mobile application for the Parking Finder MVP.
+React Native + Expo frontend for Parking Finder.
 
-## Status
+## Live Web Deployment
 
-🚧 **In Development** - To be implemented by the mobile app team
+- `http://100.26.182.109:8080`
 
-## Technology Stack
+## Stack
 
+- Expo SDK 54
 - React Native
-- TypeScript (planned)
-- React Navigation (planned)
+- React Navigation
+- AsyncStorage for token persistence
+- Web map via `pigeon-maps`
+- Native map via `react-native-maps`
 
-## Purpose
+## Local Setup
 
-- User authentication
-- Parking meter discovery
-- Parking session management
-- Notifications
+```bash
+cd mobile_app/parking-meter-frontend
+npm install
+npm run web
+```
 
-## Setup
+For native:
 
-This directory is ready for React Native project initialization. The mobile app team should:
+```bash
+npm start
+# press i (iOS) or a (Android)
+```
 
-1. Initialize React Native project:
-   ```bash
-   npx react-native init ParkingFinder --template react-native-template-typescript
-   ```
+## Configuration
 
-2. Or use Expo (if preferred):
-   ```bash
-   npx create-expo-app ParkingFinder --template
-   ```
+Backend API URL is set in:
 
-3. Update the Dockerfile with appropriate build commands
+- `parking-meter-frontend/src/config.ts`
 
-## Docker
+Current value points to deployed backend:
 
-A Dockerfile template is provided in this directory. It will need to be updated once the React Native project structure is established.
+- `http://100.26.182.109:3000`
 
-## CI/CD
+## Implemented UI Flows
 
-GitHub Actions workflow is configured to build and push Docker images when changes are made to this directory.
+- Login / Signup
+- Spot list and map pins
+- Spot reservation
+- Reservation dashboard (`active` / `past`)
+- Session screen
+
+## Important Notes
+
+- Web and native use platform-specific map implementations:
+  - `MapScreen.web.tsx` for web
+  - `MapScreen.tsx` for iOS/Android
+- If login/signup appears stuck, inline error messages are rendered on screen.

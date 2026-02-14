@@ -61,7 +61,19 @@ async function request<T>(
     ...((fetchOptions.headers as Record<string, string>) || {}),
   };
   if (token) headers['Authorization'] = `Bearer ${token}`;
-  const res = await fetch(url, { ...fetchOptions, headers });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+  let res: Response;
+  try {
+    res = await fetch(url, { ...fetchOptions, headers, signal: fetchOptions.signal ?? controller.signal });
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new Error('Request timed out. Please try again.');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeout);
+  }
   const text = await res.text();
   let data: T;
   try {
@@ -70,7 +82,12 @@ async function request<T>(
     throw new Error(res.ok ? 'Invalid response' : text || res.statusText);
   }
   if (!res.ok) {
-    const errMsg = (data as { error?: string }).error || res.statusText;
+    const payload = data as { error?: string; errors?: Array<{ msg?: string }> };
+    const validationMsg =
+      Array.isArray(payload.errors) && payload.errors.length > 0
+        ? payload.errors[0]?.msg
+        : undefined;
+    const errMsg = payload.error || validationMsg || res.statusText;
     throw new Error(errMsg);
   }
   return data;

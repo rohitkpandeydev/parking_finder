@@ -37,11 +37,69 @@ export const initializeSchema = async (): Promise<void> => {
     await pool.query(`
       INSERT INTO parking_spots (location, price, is_available, latitude, longitude)
       VALUES
-        ('Downtown - Lot A', 2.50, true, 40.71277600, -74.00597400),
-        ('Main Street - Spot 12', 3.00, true, 40.71422000, -74.00788000),
-        ('City Center - Basement B2', 4.25, false, 40.71134000, -74.00371000)
+        ('MG Road - Parking Bay A', 2.50, true, 12.97582600, 77.60610200),
+        ('Indiranagar 100 Feet Road - Spot 12', 3.00, true, 12.97189100, 77.64115100),
+        ('Koramangala 5th Block - Basement B2', 4.25, false, 12.93522300, 77.62448100)
     `);
   }
+
+  await pool.query(`
+    UPDATE parking_spots
+    SET location = CASE
+      WHEN location = 'Downtown - Lot A' THEN 'MG Road - Parking Bay A'
+      WHEN location = 'Main Street - Spot 12' THEN 'Indiranagar 100 Feet Road - Spot 12'
+      WHEN location = 'City Center - Basement B2' THEN 'Koramangala 5th Block - Basement B2'
+      ELSE location
+    END
+    WHERE location IN (
+      'Downtown - Lot A',
+      'Main Street - Spot 12',
+      'City Center - Basement B2'
+    )
+  `);
+
+  await pool.query(`
+    UPDATE parking_spots
+    SET
+      latitude = CASE
+        WHEN location = 'MG Road - Parking Bay A' THEN 12.97582600
+        WHEN location = 'Indiranagar 100 Feet Road - Spot 12' THEN 12.97189100
+        WHEN location = 'Koramangala 5th Block - Basement B2' THEN 12.93522300
+        ELSE latitude
+      END,
+      longitude = CASE
+        WHEN location = 'MG Road - Parking Bay A' THEN 77.60610200
+        WHEN location = 'Indiranagar 100 Feet Road - Spot 12' THEN 77.64115100
+        WHEN location = 'Koramangala 5th Block - Basement B2' THEN 77.62448100
+        ELSE longitude
+      END
+    WHERE location IN (
+      'MG Road - Parking Bay A',
+      'Indiranagar 100 Feet Road - Spot 12',
+      'Koramangala 5th Block - Basement B2'
+    )
+  `);
+
+  await pool.query(`
+    WITH new_spots(location, price, is_available, latitude, longitude) AS (
+      VALUES
+        ('Brigade Road - Public Parking', 3.00, true, 12.97160800, 77.60717800),
+        ('UB City - Multi Level Parking', 4.50, true, 12.97170900, 77.59500900),
+        ('Church Street - Street Parking Zone', 3.50, true, 12.97400100, 77.60594000),
+        ('Jayanagar 4th Block - Shopping Complex Parking', 2.75, true, 12.92500700, 77.58365200),
+        ('Malleswaram 8th Cross - Market Parking', 2.50, true, 13.00112600, 77.57033200),
+        ('Whitefield - ITPL Main Parking', 3.25, true, 12.98509000, 77.73605300),
+        ('Electronic City Phase 1 - Hub Parking', 2.25, true, 12.83993400, 77.67703200),
+        ('Kempegowda International Airport - Short Stay Parking', 5.00, true, 13.19863500, 77.70658900),
+        ('Majestic - City Railway Station Parking', 2.00, true, 12.97815500, 77.57287500)
+    )
+    INSERT INTO parking_spots (location, price, is_available, latitude, longitude)
+    SELECT n.location, n.price, n.is_available, n.latitude, n.longitude
+    FROM new_spots n
+    WHERE NOT EXISTS (
+      SELECT 1 FROM parking_spots p WHERE p.location = n.location
+    )
+  `);
 
   const rowsWithoutCoordinates = await pool.query<{
     id: number;

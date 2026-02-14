@@ -8,12 +8,13 @@ const JWT_EXPIRES_IN: string = process.env.JWT_EXPIRES_IN || '7d';
 
 export class AuthService {
   async register(userData: CreateUserInput): Promise<UserResponse> {
-    const { email, password, first_name, last_name } = userData;
+    const normalizedEmail = userData.email.trim().toLowerCase();
+    const { password, first_name, last_name } = userData;
 
     // Check if user already exists
     const existingUser = await pool.query(
-      'SELECT id FROM users WHERE email = $1',
-      [email]
+      'SELECT id FROM users WHERE LOWER(email) = LOWER($1)',
+      [normalizedEmail]
     );
 
     if (existingUser.rows.length > 0) {
@@ -29,17 +30,19 @@ export class AuthService {
       `INSERT INTO users (email, password_hash, first_name, last_name)
        VALUES ($1, $2, $3, $4)
        RETURNING id, email, first_name, last_name, created_at, updated_at`,
-      [email, password_hash, first_name || null, last_name || null]
+      [normalizedEmail, password_hash, first_name || null, last_name || null]
     );
 
     return result.rows[0] as UserResponse;
   }
 
   async login(email: string, password: string): Promise<{ user: UserResponse; token: string }> {
+    const normalizedEmail = email.trim().toLowerCase();
+
     // Find user by email
     const result = await pool.query(
-      'SELECT id, email, password_hash, first_name, last_name, created_at, updated_at FROM users WHERE email = $1',
-      [email]
+      'SELECT id, email, password_hash, first_name, last_name, created_at, updated_at FROM users WHERE LOWER(email) = LOWER($1)',
+      [normalizedEmail]
     );
 
     if (result.rows.length === 0) {

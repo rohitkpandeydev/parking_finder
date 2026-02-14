@@ -5,7 +5,6 @@ import {
   TextInput,
   StyleSheet,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
@@ -18,18 +17,20 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleLogin = async () => {
+    setError(null);
     if (!email.trim() || !password) {
-      Alert.alert('Error', 'Please enter email and password');
+      setError('Please enter email and password.');
       return;
     }
     setLoading(true);
     try {
       await api.login({ email: email.trim(), password });
-      navigation.replace('Map');
+      navigation.replace('Dashboard');
     } catch (e) {
-      Alert.alert('Login failed', e instanceof Error ? e.message : 'Please try again');
+      setError(e instanceof Error ? e.message : 'Login failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -60,6 +61,7 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
         onChangeText={setPassword}
         editable={!loading}
       />
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
       {loading ? (
         <ActivityIndicator size="large" color={Colors.primary} style={styles.loader} />
       ) : (
@@ -96,6 +98,10 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     textAlign: 'center',
     marginTop: 12,
+  },
+  errorText: {
+    color: '#B91C1C',
+    marginBottom: 6,
   },
   loader: { marginVertical: 16 },
 });

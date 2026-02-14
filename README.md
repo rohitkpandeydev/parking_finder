@@ -1,89 +1,65 @@
-# Parking Finder Application
+# Parking Finder
 
-This repository contains the source code for the Parking Finder MVP application.
+Parking Finder is a TypeScript + React Native/Expo application for discovering parking spots, reserving them, and tracking user reservation/session activity.
 
-## Components
+## Live Deployment
 
-- **Backend**: TypeScript/Node.js API with Express
-- **Mobile App**: Flutter application (React Native coming soon)
-- **Infrastructure**: Terraform configuration for AWS deployment
-- **CI/CD**: GitHub Actions workflows for automated builds and deployments
+- Frontend (Web): `http://100.26.182.109:8080`
+- Backend API: `http://100.26.182.109:3000`
+- Health Check: `http://100.26.182.109:3000/api/health`
 
-## Project Structure
+## Repository Structure
 
-```
-parking_finder/
-├── backend/          # TypeScript backend API
-├── mobile_app/       # Flutter mobile application
-├── infra/           # Terraform infrastructure as code
-├── ci-cd/           # CI/CD workflow definitions
-└── docs/            # Project documentation
-```
+- `backend/`: Express + TypeScript API (PostgreSQL)
+- `mobile_app/parking-meter-frontend/`: Expo app (web + mobile)
+- `infra/`: Terraform configuration
+- `docs/`: architecture/contracts/requirements docs
 
-## Quick Start
+## Implemented Features
 
-### Backend
+- JWT authentication (`register`, `login`)
+- Health endpoint with DB status
+- Spot listing module (`/api/spots`)
+- Reservation workflow (`/api/spots/:id/reserve`)
+- User reservation dashboard (`/api/reservations/me` with `active` + `past`)
+- Session APIs (`/api/sessions/*`)
+- Bangalore-focused spot seed data
+- Dockerized backend and frontend web deployment
 
-1. Navigate to `backend/` directory
-2. Install dependencies: `npm install`
-3. Set up environment variables (copy `.env.example` to `.env`)
-4. Ensure PostgreSQL is running
-5. Run: `npm run dev`
-
-See [backend/README.md](backend/README.md) for detailed API documentation.
-
-### Mobile App
-
-See [mobile_app/README.md](mobile_app/README.md) for Flutter setup instructions.
-
-### Infrastructure
-
-See [infra/README.md](infra/README.md) for Terraform deployment instructions.
-
-## CI/CD Pipeline
-
-The project uses GitHub Actions for CI/CD:
-
-1. **Backend Build**: Automatically builds and pushes Docker image when backend code changes
-2. **Mobile App Build**: Automatically builds and pushes Docker image when mobile app code changes
-3. **Infrastructure Deployment**: Automatically deploys infrastructure when Docker images are updated
-
-Workflows are located in `.github/workflows/`.
-
-## Features Implemented
-
-- ✅ User registration with email and password
-- ✅ User login with JWT token authentication
-- ✅ Session management
-- ✅ PostgreSQL/RDS database connectivity
-- ✅ Docker containerization
-- ✅ CI/CD pipelines
-- ✅ AWS infrastructure as code (Terraform)
-
-## Environment Variables
+## Quick Start (Local)
 
 ### Backend
 
-- `PORT`: Server port (default: 3000)
-- `RDS_HOST`: PostgreSQL host (preferred for AWS RDS)
-- `RDS_PORT`: PostgreSQL port
-- `RDS_DB_NAME`: Database name
-- `RDS_USERNAME`: Database user
-- `RDS_PASSWORD`: Database password
-- `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USER` / `DB_PASSWORD`: fallback names
-- `DB_SSL`: Enable SSL (`true` by default)
-- `DB_SSL_REJECT_UNAUTHORIZED`: Validate cert chain (`false` by default)
-- `JWT_SECRET`: Secret key for JWT tokens
-- `JWT_EXPIRES_IN`: Token expiration (default: 7d)
+```bash
+cd backend
+cp .env.example .env
+npm install
+npm run dev
+```
 
-## API Endpoints
+### Frontend
 
-- `GET /api/health` - Health check
-- `POST /api/auth/register` - User registration
-- `POST /api/auth/login` - User login
+```bash
+cd mobile_app/parking-meter-frontend
+npm install
+npm run web
+```
 
-See [backend/README.md](backend/README.md) for detailed API documentation.
+Then open the web URL shown by Expo (or mobile emulator/device via Expo).
 
-## Status
+## API Summary
 
-MVP – In active development
+- `GET /api/health`
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `GET /api/spots`
+- `POST /api/spots/:id/reserve` (auth)
+- `GET /api/reservations/me` (auth)
+- `POST /api/sessions` (auth)
+- `GET /api/sessions/active` (auth)
+- `GET /api/sessions` (auth)
+- `GET /api/sessions/:id` (auth)
+- `PATCH /api/sessions/:id/end` (auth)
+- Legacy meter endpoints: `GET /api/meters`, `GET /api/meters/:id`
+
+For details, see `backend/README.md`.

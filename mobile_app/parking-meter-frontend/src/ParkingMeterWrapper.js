@@ -39,7 +39,7 @@ export default function ParkingMeterWrapper() {
       <StatusBar style="dark" />
       <Stack.Navigator
         screenOptions={{ headerShown: true }}
-        initialRouteName={hasToken ? 'Map' : 'Login'}
+        initialRouteName={hasToken ? 'Dashboard' : 'Login'}
       >
         <Stack.Screen name="Login" component={LoginScreen} options={{ title: 'Log in' }} />
         <Stack.Screen name="Signup" component={SignupScreen} options={{ title: 'Sign up' }} />

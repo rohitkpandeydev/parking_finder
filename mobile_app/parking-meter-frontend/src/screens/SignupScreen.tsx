@@ -4,10 +4,10 @@ import {
   Text,
   TextInput,
   StyleSheet,
-  Alert,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  TouchableOpacity,
 } from 'react-native';
 import AppButton from '../components/AppButton';
 import { Colors } from '../themes/colors';
@@ -19,14 +19,16 @@ export default function SignupScreen({ navigation }: { navigation: any }) {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSignup = async () => {
+    setError(null);
     if (!email.trim() || !password) {
-      Alert.alert('Error', 'Please enter email and password');
+      setError('Please enter email and password.');
       return;
     }
     if (password.length < 8) {
-      Alert.alert('Error', 'Password must be at least 8 characters');
+      setError('Password must be at least 8 characters.');
       return;
     }
     setLoading(true);
@@ -37,11 +39,9 @@ export default function SignupScreen({ navigation }: { navigation: any }) {
         first_name: firstName.trim() || undefined,
         last_name: lastName.trim() || undefined,
       });
-      Alert.alert('Success', 'Account created. Please log in.', [
-        { text: 'OK', onPress: () => navigation.replace('Login') },
-      ]);
+      navigation.replace('Login');
     } catch (e) {
-      Alert.alert('Signup failed', e instanceof Error ? e.message : 'Please try again');
+      setError(e instanceof Error ? e.message : 'Signup failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -88,12 +88,16 @@ export default function SignupScreen({ navigation }: { navigation: any }) {
         onChangeText={setLastName}
         editable={!loading}
       />
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
       {loading ? (
         <ActivityIndicator size="large" color={Colors.primary} style={styles.loader} />
       ) : (
         <AppButton title="Sign Up" onPress={handleSignup} />
       )}
-      <Text style={styles.hint}>Already have an account? Go back and log in.</Text>
+      <TouchableOpacity onPress={() => navigation.replace('Login')} disabled={loading}>
+        <Text style={styles.link}>Back to Sign in</Text>
+      </TouchableOpacity>
+      <Text style={styles.hint}>Already have an account? Use Sign in.</Text>
     </KeyboardAvoidingView>
   );
 }
@@ -121,8 +125,17 @@ const styles = StyleSheet.create({
   hint: {
     fontSize: 12,
     color: Colors.muted,
-    marginTop: 12,
+    marginTop: 8,
     textAlign: 'center',
+  },
+  errorText: {
+    color: '#B91C1C',
+    marginBottom: 6,
+  },
+  link: {
+    color: Colors.primary,
+    textAlign: 'center',
+    marginTop: 12,
   },
   loader: { marginVertical: 16 },
 });
