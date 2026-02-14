@@ -7,6 +7,7 @@ type ReserveSpotResult =
   | { status: 'not_found' }
   | { status: 'unavailable' };
 
+//REVERVATION MINUTES
 const DEFAULT_RESERVATION_MINUTES = 120;
 
 export class SpotService {
@@ -30,6 +31,7 @@ export class SpotService {
     }));
   }
 
+//ASYC CALLS
   async reserve(userId: number, id: number): Promise<ReserveSpotResult> {
     await this.reservationService.syncExpiredReservations();
 
