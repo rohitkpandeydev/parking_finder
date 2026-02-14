@@ -5,6 +5,7 @@ import sessionRoutes from './sessionRoutes';
 import healthRoutes from './healthRoutes';
 import spotRoutes from './spotRoutes';
 import reservationRoutes from './reservationRoutes';
+import paymentRoutes from './paymentRoutes';
 
 const router = Router();
 
@@ -14,5 +15,6 @@ router.use('/meters', meterRoutes);
 router.use('/spots', spotRoutes);
 router.use('/reservations', reservationRoutes);
 router.use('/sessions', sessionRoutes);
+router.use('/payments', paymentRoutes);
 
 export default router;

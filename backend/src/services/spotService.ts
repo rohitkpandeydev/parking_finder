@@ -80,10 +80,10 @@ export class SpotService {
             $2,
             'active',
             CURRENT_TIMESTAMP + ($3::text || ' hours')::interval,
-            $3,
-            ROUND(($4 * $3)::numeric, 2),
+            $3::int,
+            ROUND(($4::numeric * $3::int)::numeric, 2),
             0,
-            ROUND(($4 * $3)::numeric, 2)
+            ROUND(($4::numeric * $3::int)::numeric, 2)
           )
           RETURNING id, expires_at, booked_hours, base_cost, total_cost
         `,

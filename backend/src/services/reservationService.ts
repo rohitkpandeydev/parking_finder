@@ -22,7 +22,9 @@ export class ReservationService {
           r.base_cost,
           r.overtime_cost,
           r.total_cost,
-          r.checked_out_at
+          r.checked_out_at,
+          r.payment_status,
+          r.paid_at
         FROM reservations r
         INNER JOIN parking_spots s ON s.id = r.spot_id
         WHERE r.user_id = $1
@@ -70,7 +72,9 @@ export class ReservationService {
             r.base_cost,
             r.overtime_cost,
             r.total_cost,
-            r.checked_out_at
+            r.checked_out_at,
+            r.payment_status,
+            r.paid_at
           FROM reservations r
           INNER JOIN parking_spots s ON s.id = r.spot_id
           WHERE r.id = $1 AND r.user_id = $2
@@ -210,6 +214,8 @@ export class ReservationService {
     overtime_cost: number | string;
     total_cost: number | string;
     checked_out_at: Date | string | null;
+    payment_status: 'unpaid' | 'paid' | 'waived';
+    paid_at: Date | string | null;
   }): Reservation {
     const reservedAt = row.reserved_at instanceof Date ? row.reserved_at : new Date(row.reserved_at);
     const expiresAt = row.expires_at instanceof Date ? row.expires_at : new Date(row.expires_at);
@@ -219,6 +225,8 @@ export class ReservationService {
         : row.checked_out_at instanceof Date
           ? row.checked_out_at
           : new Date(row.checked_out_at);
+    const paidAt =
+      row.paid_at == null ? null : row.paid_at instanceof Date ? row.paid_at : new Date(row.paid_at);
 
     const price = Number(row.price);
     const baseCost = Number(row.base_cost);
@@ -245,6 +253,8 @@ export class ReservationService {
       overtime_minutes: overtimeMinutes,
       is_overdue: overtimeMinutes > 0,
       estimated_total_cost: estimatedTotalCost,
+      payment_status: row.payment_status,
+      paid_at: paidAt ? paidAt.toISOString() : null,
     };
   }
 }

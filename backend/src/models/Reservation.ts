@@ -15,6 +15,8 @@ export interface Reservation {
   overtime_minutes: number;
   is_overdue: boolean;
   estimated_total_cost: number;
+  payment_status: 'unpaid' | 'paid' | 'waived';
+  paid_at: string | null;
 }
 
 export interface ReservationDashboardResponse {

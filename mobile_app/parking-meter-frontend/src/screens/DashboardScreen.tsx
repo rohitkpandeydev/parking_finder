@@ -24,11 +24,15 @@ function ReservationSection({
   reservations,
   onCheckout,
   checkingOutId,
+  onPay,
+  payingReservationId,
 }: {
   title: string;
   reservations: Reservation[];
   onCheckout?: (reservationId: number) => Promise<void>;
   checkingOutId?: number | null;
+  onPay?: (reservationId: number) => Promise<void>;
+  payingReservationId?: number | null;
 }) {
   return (
     <View style={styles.section}>
@@ -52,6 +56,7 @@ function ReservationSection({
               {reservation.checked_out_at ? 'Final Total' : 'Current Total'}: ₹
               {reservation.estimated_total_cost.toFixed(2)}
             </Text>
+            <Text style={styles.cardMeta}>Payment: {reservation.payment_status}</Text>
             {reservation.is_overdue && !reservation.checked_out_at ? (
               <Text style={styles.overdueText}>
                 Overdue: Charges are increasing until checkout.
@@ -68,6 +73,17 @@ function ReservationSection({
                 </Text>
               </TouchableOpacity>
             ) : null}
+            {onPay && reservation.checked_out_at && reservation.payment_status !== 'paid' ? (
+              <TouchableOpacity
+                style={[styles.payBtn, payingReservationId === reservation.id && styles.checkoutBtnDisabled]}
+                onPress={() => onPay(reservation.id)}
+                disabled={payingReservationId === reservation.id}
+              >
+                <Text style={styles.checkoutBtnText}>
+                  {payingReservationId === reservation.id ? 'Processing…' : 'Pay now (Demo)'}
+                </Text>
+              </TouchableOpacity>
+            ) : null}
             <Text style={styles.status}>Status: {reservation.status}</Text>
           </View>
         ))
@@ -81,6 +97,7 @@ export default function DashboardScreen({ navigation }: { navigation: any }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [checkingOutId, setCheckingOutId] = useState<number | null>(null);
+  const [payingReservationId, setPayingReservationId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const loadDashboard = useCallback(async () => {
@@ -127,6 +144,26 @@ export default function DashboardScreen({ navigation }: { navigation: any }) {
     [loadDashboard]
   );
 
+  const payReservation = useCallback(
+    async (reservationId: number) => {
+      setPayingReservationId(reservationId);
+      try {
+        const intent = await api.createReservationPaymentIntent(reservationId);
+        const confirmed = await api.confirmMockPayment(intent.payment.id);
+        Alert.alert(
+          'Payment successful',
+          `Demo payment captured: ₹${confirmed.payment.amount.toFixed(2)} ${confirmed.payment.currency}`
+        );
+        await loadDashboard();
+      } catch (e) {
+        Alert.alert('Payment failed', e instanceof Error ? e.message : 'Failed to process payment');
+      } finally {
+        setPayingReservationId(null);
+      }
+    },
+    [loadDashboard]
+  );
+
   if (loading) {
     return (
       <View style={styles.centered}>
@@ -150,8 +187,15 @@ export default function DashboardScreen({ navigation }: { navigation: any }) {
         reservations={data.active}
         onCheckout={checkoutReservation}
         checkingOutId={checkingOutId}
+        onPay={payReservation}
+        payingReservationId={payingReservationId}
       />
-      <ReservationSection title="Past Reservations" reservations={data.past} />
+      <ReservationSection
+        title="Past Reservations"
+        reservations={data.past}
+        onPay={payReservation}
+        payingReservationId={payingReservationId}
+      />
 
       <AppButton title="Open map" onPress={() => navigation.navigate('Map')} />
     </ScrollView>
@@ -211,4 +255,11 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   checkoutBtnText: { color: Colors.white, fontWeight: '700' },
+  payBtn: {
+    marginTop: 8,
+    backgroundColor: '#0369A1',
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
 });

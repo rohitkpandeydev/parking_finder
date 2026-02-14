@@ -100,11 +100,9 @@ export default function MapScreen({ navigation }: { navigation: any }) {
     try {
       const { spot, expires_at } = await api.reserveSpot(selectedSpot.id, bookingHours);
       setSpots((prev) => prev.map((item) => (item.id === spot.id ? spot : item)));
-      try {
-        await scheduleReservationReminder(new Date(expires_at), selectedSpot.location);
-      } catch {
+      void scheduleReservationReminder(new Date(expires_at), selectedSpot.location).catch(() => {
         // Notification errors should not block booking flow.
-      }
+      });
       Alert.alert(
         'Reserved',
         `Spot #${spot.id} reserved for ${bookingHours} hour${bookingHours > 1 ? 's' : ''}.`

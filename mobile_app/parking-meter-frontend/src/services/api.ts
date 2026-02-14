@@ -50,11 +50,26 @@ export type Reservation = {
   overtime_minutes: number;
   is_overdue: boolean;
   estimated_total_cost: number;
+  payment_status: 'unpaid' | 'paid' | 'waived';
+  paid_at: string | null;
 };
 
 export type ReservationDashboard = {
   active: Reservation[];
   past: Reservation[];
+};
+
+export type Payment = {
+  id: number;
+  reservation_id: number;
+  user_id: number;
+  amount: number;
+  currency: string;
+  status: 'initiated' | 'succeeded' | 'failed';
+  provider: string;
+  provider_reference: string | null;
+  created_at: string;
+  updated_at: string;
 };
 
 async function request<T>(
@@ -200,6 +215,26 @@ export const api = {
       `/api/reservations/${reservationId}/checkout`,
       { method: 'POST', token }
     );
+  },
+
+  async createReservationPaymentIntent(
+    reservationId: number
+  ): Promise<{ message: string; payment: Payment; client_secret: string }> {
+    const token = await authStorage.getToken();
+    if (!token) throw new Error('Not logged in');
+    return request<{ message: string; payment: Payment; client_secret: string }>(
+      `/api/payments/reservations/${reservationId}/intent`,
+      { method: 'POST', token }
+    );
+  },
+
+  async confirmMockPayment(paymentId: number): Promise<{ message: string; payment: Payment }> {
+    const token = await authStorage.getToken();
+    if (!token) throw new Error('Not logged in');
+    return request<{ message: string; payment: Payment }>(`/api/payments/${paymentId}/confirm`, {
+      method: 'POST',
+      token,
+    });
   },
 
   async getActiveSession(): Promise<ParkingSession | null> {

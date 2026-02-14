@@ -146,6 +146,9 @@ export const initializeSchema = async (): Promise<void> => {
       overtime_cost NUMERIC(10, 2) NOT NULL DEFAULT 0,
       total_cost NUMERIC(10, 2) NOT NULL DEFAULT 0,
       checked_out_at TIMESTAMP NULL,
+      payment_status VARCHAR(20) NOT NULL DEFAULT 'unpaid'
+        CHECK (payment_status IN ('unpaid', 'paid', 'waived')),
+      paid_at TIMESTAMP NULL,
       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
     )
@@ -157,7 +160,9 @@ export const initializeSchema = async (): Promise<void> => {
     ADD COLUMN IF NOT EXISTS base_cost NUMERIC(10, 2) NOT NULL DEFAULT 0,
     ADD COLUMN IF NOT EXISTS overtime_cost NUMERIC(10, 2) NOT NULL DEFAULT 0,
     ADD COLUMN IF NOT EXISTS total_cost NUMERIC(10, 2) NOT NULL DEFAULT 0,
-    ADD COLUMN IF NOT EXISTS checked_out_at TIMESTAMP NULL
+    ADD COLUMN IF NOT EXISTS checked_out_at TIMESTAMP NULL,
+    ADD COLUMN IF NOT EXISTS payment_status VARCHAR(20) NOT NULL DEFAULT 'unpaid',
+    ADD COLUMN IF NOT EXISTS paid_at TIMESTAMP NULL
   `);
 
   await pool.query(`
@@ -194,5 +199,27 @@ export const initializeSchema = async (): Promise<void> => {
   );
   await pool.query(
     'CREATE INDEX IF NOT EXISTS idx_reservations_checkout_status ON reservations(checked_out_at, status)'
+  );
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS payments (
+      id SERIAL PRIMARY KEY,
+      reservation_id INTEGER NOT NULL REFERENCES reservations(id) ON DELETE CASCADE,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      amount NUMERIC(10, 2) NOT NULL CHECK (amount >= 0),
+      currency VARCHAR(3) NOT NULL DEFAULT 'INR',
+      status VARCHAR(20) NOT NULL DEFAULT 'initiated'
+        CHECK (status IN ('initiated', 'succeeded', 'failed')),
+      provider VARCHAR(50) NOT NULL DEFAULT 'mock',
+      provider_reference VARCHAR(100),
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  await pool.query(
+    'CREATE INDEX IF NOT EXISTS idx_payments_user_id ON payments(user_id)'
+  );
+  await pool.query(
+    'CREATE INDEX IF NOT EXISTS idx_payments_reservation_id ON payments(reservation_id)'
   );
 };
